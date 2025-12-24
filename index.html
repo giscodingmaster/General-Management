@@ -8,29 +8,26 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Fonts -->
+  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- React & Dependencies via Import Map -->
+  <!-- React & Libraries via Import Map -->
   <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.294.0",
-    "recharts": "https://esm.sh/recharts@2.10.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.330.0",
+        "recharts": "https://esm.sh/recharts@2.12.0"
+      }
+    }
+  </script>
   
-  <!-- Babel for JSX -->
+  <!-- Babel for In-Browser Compilation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+    body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; overflow: hidden; }
     
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
@@ -39,55 +36,53 @@
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
     /* Animations */
-    .animate-in { animation-duration: 0.5s; animation-fill-mode: both; }
-    .fade-in { animation-name: fadeIn; }
-    .slide-in-up { animation-name: slideUp; }
-    .slide-in-right { animation-name: slideRight; }
-    .delay-100 { animation-delay: 100ms; }
-    .delay-200 { animation-delay: 200ms; }
-    .delay-300 { animation-delay: 300ms; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+    .animate-pulse-soft { animation: pulseSoft 2s infinite; }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    @keyframes slideRight { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    
-    /* Glassmorphism Utils */
-    .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
-    .glass-dark { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); }
+    @keyframes slideUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes pulseSoft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
   </style>
 <link rel="stylesheet" href="/index.css">
 </head>
 <body>
   <div id="root"></div>
 
+  <!-- MAIN APPLICATION LOGIC -->
   <script type="text/babel" data-type="module">
     import React, { useState, useEffect, useMemo } from 'react';
     import { createRoot } from 'react-dom/client';
     import { 
       LayoutDashboard, ClipboardList, Settings, Menu, Map as MapIcon, ChevronDown, Calendar,
-      Sparkles, Save, X, Search, Users, Truck, Briefcase, Car, Drill, Bus, Ban,
+      Sparkles, Save, X, Search, Users, Truck, Briefcase, Car, Bus, Ban,
       Lock, Unlock, Filter, Building, MapPin, XCircle, Clock, Check, ChevronLeft, ChevronRight,
       ChevronUp, Trophy, Medal, Crown, Activity, AlertTriangle, FileBarChart, Zap, Loader2,
-      TrendingUp, ArrowRightLeft, Target, List, ArrowUpRight, FileText, Navigation
+      TrendingUp, ArrowRightLeft, Target, List, ArrowUpRight, FileText, Navigation, CheckSquare, Square,
+      Plus, Trash2, Edit2, User, Hammer // Using Hammer as fallback for Drill if needed, but 0.330 has Drill
     } from 'lucide-react';
+    
+    // Fallback for Drill icon if specific version issues occur, though 0.330 includes Drill
+    const Drill = Hammer; 
+
     import { 
       PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip 
     } from 'recharts';
 
-    // --- TYPES & CONSTANTS ---
-    
+    // --- TYPES ---
     const EmployeeStatus = {
       ABSENT: 'ABSENT',
       OFFICE: 'OFFICE',
       SITE: 'SITE',
     };
 
+    // --- MOCK DATA ---
     const AREAS = [
       { id: 'Cairo', name: 'القاهرة' },
       { id: 'Gharbia', name: 'الغربية' },
       { id: 'Dakahlia', name: 'الدقهلية' },
-      { id: 'Menoufia', name: 'المنوفية' },
       { id: 'Alexandria', name: 'الإسكندرية' },
+      { id: 'Suez', name: 'السويس' },
     ];
 
     const MOCK_EMPLOYEES = [
@@ -97,7 +92,6 @@
       { id: '4', name: 'محمد فرج', role: 'سائق', department: 'Company', avatar: 'https://i.pravatar.cc/150?u=4', status: 'SITE', areaId: 'Cairo' },
       { id: '5', name: 'ندى سامح', role: 'مدير عمليات', department: 'Company', avatar: 'https://i.pravatar.cc/150?u=5', status: 'OFFICE', areaId: 'Cairo' },
       { id: '6', name: 'خالد علي', role: 'مسؤول سلامة', department: 'Institute', avatar: 'https://i.pravatar.cc/150?u=6', status: 'OFFICE', areaId: 'Gharbia' },
-      { id: '7', name: 'يوسف كمال', role: 'فني لحام', department: 'Company', avatar: 'https://i.pravatar.cc/150?u=7', status: 'SITE', areaId: 'Cairo' },
     ];
 
     const MOCK_ASSETS = [
@@ -120,49 +114,29 @@
       }
     ];
 
-    // --- MOCK SERVICES ---
+    // --- MOCK AI SERVICES ---
     const generateTaskDescription = async (title, assetCount, peopleCount) => {
-      await new Promise(r => setTimeout(r, 1500));
+      await new Promise(r => setTimeout(r, 1000));
       return `وصف تلقائي للمهمة: ${title}. سيتم العمل باستخدام ${assetCount} معدات وبواسطة فريق مكون من ${peopleCount} أفراد. يرجى الالتزام بمعايير السلامة المهنية وتحديث الحالة فور الوصول للموقع.`;
     };
 
     const generateManagerReport = async (date, type, data) => {
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 1500));
       return `تقرير الأداء ليوم ${date}:\nتتصدر منطقة القاهرة بنسبة حضور 92%، بينما تحتاج الغربية لمراجعة توزيع المركبات. العمليات تسير بشكل مستقر ولا توجد حوادث مبلغ عنها.`;
-    };
-
-    const generateDetailedReport = async (areaName) => {
-      await new Promise(r => setTimeout(r, 2000));
-      return `
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm text-right border border-slate-200">
-            <thead class="bg-slate-100 text-slate-700">
-              <tr>
-                <th class="px-4 py-2 border">الاسم</th>
-                <th class="px-4 py-2 border">الوظيفة</th>
-                <th class="px-4 py-2 border">الحالة</th>
-                <th class="px-4 py-2 border">وقت الحضور</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td class="px-4 py-2 border">أحمد سليمان</td><td class="px-4 py-2 border">مهندس</td><td class="px-4 py-2 border bg-green-50 text-green-700">حضور</td><td class="px-4 py-2 border">08:00</td></tr>
-              <tr><td class="px-4 py-2 border">وليد محي</td><td class="px-4 py-2 border">مساح</td><td class="px-4 py-2 border bg-red-50 text-red-700">غياب</td><td class="px-4 py-2 border">-</td></tr>
-            </tbody>
-          </table>
-        </div>
-      `;
     };
 
     // --- COMPONENTS ---
 
-    // 1. Employee Row (Ultimate Style)
+    // 1. EmployeeRow (Ultimate Style)
     const EmployeeRow = ({ employee, onChangeStatus, isBusy, busyTaskTitle, isOverride }) => {
       const disabled = isBusy && !isOverride;
 
       return (
-        <div className={`group relative flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm mb-3 transition-all duration-300 hover:shadow-md hover:border-blue-100 ${disabled ? 'opacity-60 bg-slate-50' : ''}`}>
-          <div className="flex items-center gap-4">
-            <div className="relative">
+        <div className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm mb-3 transition-all duration-300 hover:shadow-md hover:border-blue-100 ${disabled ? 'opacity-60 bg-slate-50' : ''}`}>
+          
+          {/* Left: Employee Info */}
+          <div className="flex items-center gap-4 mb-3 sm:mb-0">
+            <div className="relative shrink-0">
                  <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 transition-colors ${isBusy ? 'border-amber-300 grayscale' : 'border-white shadow-sm'}`}>
                     <img src={employee.avatar} alt={employee.name} className="w-full h-full object-cover" />
                  </div>
@@ -171,7 +145,7 @@
                          <Clock size={10} strokeWidth={3} />
                      </div>
                  )}
-                 <div className={`absolute top-0 right-0 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
+                 <div className={`absolute top-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm transition-colors duration-300 ${
                      employee.status === 'SITE' ? 'bg-blue-500' : 
                      employee.status === 'OFFICE' ? 'bg-amber-500' : 'bg-red-500'
                  }`}></div>
@@ -180,23 +154,33 @@
             <div>
               <h4 className={`font-bold text-slate-800 flex items-center gap-2 ${isBusy ? 'text-slate-600' : ''}`}>
                 {employee.name}
-                {isBusy && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100">في مهمة</span>}
+                {isBusy && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 whitespace-nowrap">
+                     في مهمة
+                  </span>
+                )}
               </h4>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                 {employee.role}
-                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                 <span className="text-slate-400">{employee.department === 'Company' ? 'الشركة' : 'المعهد'}</span>
               </p>
-              {isBusy && <p className="text-[10px] text-amber-600 mt-1">مشغول في: {busyTaskTitle}</p>}
+              {isBusy && (
+                 <p className="text-[10px] text-amber-600 mt-1 font-medium">مشغول في: {busyTaskTitle}</p>
+              )}
             </div>
           </div>
 
-          <div className={`p-1 bg-slate-100/80 rounded-xl flex items-center gap-1 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+          {/* Right: Ultimate Segmented Control */}
+          <div className={`p-1.5 bg-slate-100 rounded-xl flex items-center gap-1 sm:w-auto w-full ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+            
             <button
               onClick={() => onChangeStatus(employee.id, 'ABSENT')}
-              className={`relative px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
-                employee.status === 'ABSENT' ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
+              className={`relative flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                employee.status === 'ABSENT'
+                  ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' 
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
               }`}
             >
               <XCircle size={14} className={employee.status === 'ABSENT' ? "fill-red-100" : ""} />
@@ -205,8 +189,10 @@
 
             <button
               onClick={() => onChangeStatus(employee.id, 'OFFICE')}
-              className={`relative px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
-                employee.status === 'OFFICE' ? 'bg-white text-amber-600 shadow-sm ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
+              className={`relative flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                employee.status === 'OFFICE'
+                  ? 'bg-white text-amber-600 shadow-sm ring-1 ring-black/5' 
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
               }`}
             >
               <Building size={14} className={employee.status === 'OFFICE' ? "fill-amber-100" : ""} />
@@ -215,14 +201,17 @@
 
             <button
               onClick={() => onChangeStatus(employee.id, 'SITE')}
-              className={`relative px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
-                employee.status === 'SITE' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
+              className={`relative flex-1 sm:flex-none px-5 py-2 rounded-lg text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                employee.status === 'SITE'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200 scale-105' 
+                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'
               }`}
             >
               {employee.status === 'SITE' && <Check size={14} strokeWidth={3} />}
               <MapPin size={14} />
               <span>موقع</span>
             </button>
+
           </div>
         </div>
       );
@@ -267,7 +256,7 @@
             disabled ? 'opacity-70 bg-slate-50 border-slate-200 cursor-not-allowed' : (selected ? theme.selected : `bg-white border-slate-200 ${theme.base}`)
           }`}
         >
-          {isBusy && !selected && <div className="absolute top-2 left-2 text-amber-500 animate-pulse"><Clock size={14} /></div>}
+          {isBusy && !selected && <div className="absolute top-2 left-2 text-amber-500 animate-pulse-soft"><Clock size={14} /></div>}
           <div className="flex justify-between items-start mb-2">
             <div className={`p-2 rounded-lg transition-colors ${theme.iconBox}`}>
               {customIcon ? customIcon : (asset.type === 'CAR' ? <Car size={18} /> : <Drill size={18} />)}
@@ -277,14 +266,14 @@
           <div>
             <h5 className={`text-sm font-semibold transition-colors ${theme.title}`}>{asset.name}</h5>
             <p className="text-xs text-slate-500 truncate mt-1">
-              {isBusy ? <span className="text-amber-600 flex items-center gap-1"> مشغول: {busyTaskTitle || 'مهمة'}</span> : asset.details}
+              {isBusy ? <span className="text-amber-600 flex items-center gap-1"> مشغول: {busyTaskTitle}</span> : asset.details}
             </p>
           </div>
         </div>
       );
     };
 
-    // 3. Task Entry Screen
+    // 3. TaskEntry
     const TaskEntry = ({ areaName, availableAssets, availableEmployees, tasks, onSave, onCancel }) => {
       const [title, setTitle] = useState('');
       const [description, setDescription] = useState('');
@@ -295,11 +284,9 @@
       const [searchEmployee, setSearchEmployee] = useState('');
       const [statusFilter, setStatusFilter] = useState('ALL');
       const [isGenerating, setIsGenerating] = useState(false);
-      const [expandedGroups, setExpandedGroups] = useState({ cars: true, equipment: true });
 
       useEffect(() => setEmployees(availableEmployees), [availableEmployees]);
 
-      // Collision Detection
       const busyMap = useMemo(() => {
         const busyA = new Set();
         const busyE = new Set();
@@ -347,7 +334,7 @@
       };
 
       return (
-        <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in pb-10">
+        <div className="max-w-7xl mx-auto space-y-6 animate-fade-in pb-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">مهمة تشغيل جديدة ({areaName})</h1>
@@ -437,8 +424,8 @@
       );
     };
 
-    // 4. Manager Dashboard
-    const ManagerDashboard = ({ assets, employees }) => {
+    // 4. ManagerDashboard
+    const ManagerDashboard = () => {
        const [showReport, setShowReport] = useState(false);
        const [loading, setLoading] = useState(false);
        const [reportContent, setReportContent] = useState('');
@@ -458,8 +445,7 @@
        ];
 
        return (
-         <div className="p-4 space-y-8 animate-in fade-in">
-            {/* Top Bar */}
+         <div className="p-4 space-y-8 animate-fade-in">
             <div className="bg-white/90 backdrop-blur-xl p-4 rounded-3xl border border-white/50 flex flex-wrap justify-between items-center gap-4 shadow-sm sticky top-2 z-30">
                <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-slate-800 text-white rounded-2xl flex items-center justify-center shadow-lg"><Trophy size={24} className="text-yellow-400"/></div>
@@ -474,7 +460,7 @@
             </div>
 
             {showReport && (
-                <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative animate-in slide-in-up">
+                <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl relative animate-slide-up">
                     <button onClick={() => setShowReport(false)} className="absolute top-4 right-4 text-slate-400 hover:text-indigo-600"><X size={18}/></button>
                     <div className="flex items-center gap-2 mb-3 text-indigo-700 font-bold"><Zap size={20}/> تحليل AI</div>
                     <p className="text-slate-700 leading-relaxed whitespace-pre-line">{reportContent}</p>
@@ -482,46 +468,30 @@
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
-               {/* Podium Rank 2 */}
                <div className="order-2 lg:order-1 bg-white/80 backdrop-blur p-6 rounded-3xl border border-white shadow-xl hover:-translate-y-2 transition-transform cursor-pointer">
                   <div className="text-center">
                      <div className="inline-block p-3 bg-slate-50 rounded-2xl mb-3"><Medal size={32} className="text-slate-400"/></div>
                      <h2 className="text-xl font-bold text-slate-800">الغربية</h2>
                      <p className="text-sm text-slate-500">850 نقطة</p>
-                     <div className="mt-4 flex justify-center gap-4 text-xs font-bold text-slate-700">
-                        <span>92% حضور</span>
-                        <span>5 مواقع</span>
-                     </div>
                   </div>
                </div>
-               {/* Podium Rank 1 */}
                <div className="order-1 lg:order-2 bg-gradient-to-b from-white to-amber-50 p-8 rounded-[2rem] border border-amber-100 shadow-2xl relative transform scale-105 z-10">
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2"><Crown size={48} className="text-amber-400 drop-shadow-md" fill="#FBBF24"/></div>
                   <div className="text-center mt-6">
                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Top Performance</span>
                      <h1 className="text-3xl font-black text-slate-900 mt-2">القاهرة</h1>
                      <div className="text-4xl font-bold text-amber-500 my-2">985</div>
-                     <div className="flex justify-around mt-6 bg-white/50 p-3 rounded-xl">
-                        <div><div className="text-[10px] text-slate-400">فريق</div><div className="font-bold">45</div></div>
-                        <div><div className="text-[10px] text-slate-400">حضور</div><div className="font-bold">98%</div></div>
-                     </div>
                   </div>
                </div>
-               {/* Podium Rank 3 */}
                <div className="order-3 bg-white/80 backdrop-blur p-6 rounded-3xl border border-white shadow-xl hover:-translate-y-2 transition-transform cursor-pointer">
                   <div className="text-center">
                      <div className="inline-block p-3 bg-slate-50 rounded-2xl mb-3"><Medal size={32} className="text-orange-400"/></div>
                      <h2 className="text-xl font-bold text-slate-800">الإسكندرية</h2>
                      <p className="text-sm text-slate-500">820 نقطة</p>
-                     <div className="mt-4 flex justify-center gap-4 text-xs font-bold text-slate-700">
-                        <span>88% حضور</span>
-                        <span>3 مواقع</span>
-                     </div>
                   </div>
                </div>
             </div>
 
-            {/* Charts Section */}
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                 <h3 className="font-bold mb-6">توزيع القوى العاملة</h3>
                 <div className="h-64">
@@ -536,25 +506,17 @@
                       </PieChart>
                    </ResponsiveContainer>
                 </div>
-                <div className="flex justify-center gap-4 mt-2">
-                   {data.map(d => (
-                       <div key={d.name} className="flex items-center gap-1 text-xs font-bold text-slate-600">
-                          <span className="w-2 h-2 rounded-full" style={{background: d.color}}></span> {d.name}
-                       </div>
-                   ))}
-                </div>
             </div>
          </div>
        );
     };
 
-    // --- MAIN APP ---
+    // 5. Main App Shell
     const App = () => {
       const [view, setView] = useState('DISPATCH');
       const [sidebarOpen, setSidebarOpen] = useState(true);
       const [selectedArea, setSelectedArea] = useState(AREAS[0]);
       
-      // Global State
       const [assets, setAssets] = useState(MOCK_ASSETS);
       const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
       const [tasks, setTasks] = useState(MOCK_TASKS);
@@ -576,7 +538,6 @@
 
       return (
         <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-800">
-          {/* Sidebar */}
           <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white flex flex-col transition-all duration-300 z-50 shadow-2xl`}>
              <div className="p-6 flex items-center gap-3 border-b border-slate-800">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold">غ</div>
@@ -606,7 +567,6 @@
              </nav>
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1 flex flex-col h-screen overflow-hidden relative bg-gradient-to-br from-slate-50 to-slate-100">
              <header className="h-16 bg-white/80 backdrop-blur border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-40">
                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg"><Menu size={20}/></button>
@@ -624,7 +584,7 @@
                    onCancel={() => setView('CALENDAR')}
                  />
                )}
-               {view === 'MANAGER' && <ManagerDashboard assets={assets} employees={employees} />}
+               {view === 'MANAGER' && <ManagerDashboard />}
                {view === 'CALENDAR' && (
                   <div className="text-center py-20">
                      <Calendar className="mx-auto text-slate-300 mb-4" size={48}/>
